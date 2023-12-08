@@ -95,14 +95,14 @@ def update_agg_ratings(agg_ratings_GT100):
 # Function to create the user-item matrix
 def create_user_item_matrix(df_GT100):
     matrix = df_GT100.pivot_table(index='title', columns='user_id', values='rating')
-    print(matrix.head(), "\n")
-    print(matrix[2])  
-    print(matrix.loc['Inception (2010)'])
+    # print(matrix.head(), "\n")
+    # print(matrix[2])  
+    # print(matrix.loc['Inception (2010)'])
 
 
     matrix_norm = matrix.subtract(matrix.mean(axis=1), axis=0)
-    print(matrix_norm.loc['Inception (2010)'])
-    return matrix_norm    
+    #print(matrix_norm.loc['Inception (2010)'])
+    return matrix    
 
 # Function to calculate item similarity matrix
 def calculate_item_similarity(matrix_norm):
@@ -111,11 +111,16 @@ def calculate_item_similarity(matrix_norm):
 
 # Function to predict a rating for a given user and movie
 def predict_rating(matrix_norm, item_similarity, picked_userid, picked_movie):
-    print(matrix_norm[picked_userid])
+    # Check if picked_movie is in item_similarity
+    if picked_movie not in item_similarity.columns:
+        with open('predict_rating_out.txt', 'a') as f:
+            f.write(f'\n***********{picked_movie} is not in the item_similarity matrix***********\n\n')
+        return None
+    #print(matrix_norm[picked_userid])
     picked_userid_watched = pd.DataFrame(matrix_norm[picked_userid].dropna(axis=0, how='all') \
                                     .sort_values(ascending=False)) \
-                                    .reset_index() \
-                                    .rename(columns={1: 'rating'})
+                                    .reset_index() 
+    picked_userid_watched.columns = ['title', 'rating']
     
     picked_movie_similarity_score = item_similarity[[picked_movie]].reset_index() \
         .rename(columns={picked_movie:'similarity_score'})
@@ -125,7 +130,7 @@ def predict_rating(matrix_norm, item_similarity, picked_userid, picked_movie):
                                             on='title',
                                             how='inner') \
                                        .sort_values('similarity_score', ascending=False)[:5]
-    print(picked_userid_watched_similarity.head())    
+    #print(picked_userid_watched_similarity.head())    
     predicted_rating = round(np.average(picked_userid_watched_similarity['rating'],
                                     weights=picked_userid_watched_similarity['similarity_score']), 6)
     return predicted_rating
@@ -170,17 +175,17 @@ def main():
     
     agg_ratings_GT100 = update_agg_ratings(agg_ratings_GT100)
 
-    print(agg_ratings_GT100)
+    print(agg_ratings_GT100.head(), "\n")
 
 
 
     # Print all rows for user_id = 2
-    print(agg_ratings_GT100[agg_ratings_GT100['user_id'] == 2], "\n")
+    #print(agg_ratings_GT100[agg_ratings_GT100['user_id'] == 2], "\n")
 
     # Create a test set by taking one row for each user_id, only if the user has an entry in their 'rating' column
     test = agg_ratings_GT100[agg_ratings_GT100['rating'].notna()].groupby('user_id').apply(lambda x: x.sample(1, random_state=1)).reset_index(drop=True)
     # print rows in test set with user_id = 1
-    print(test[test['user_id'] == 2], "\n")
+    #print(test[test['user_id'] == 2], "\n")
 
     # Create a training set by removing the test set rows from the matrix
     train = agg_ratings_GT100.drop(test.index)
@@ -195,8 +200,8 @@ def main():
     test.to_csv('test.csv')
 
     # Print all rows for user_id = 2
-    print(train[train['user_id'] == 2], "\n")
-    print(test[test['user_id'] == 2], "\n")
+    #print(train[train['user_id'] == 2], "\n")
+    #print(test[test['user_id'] == 2], "\n")
 
 
     
@@ -210,6 +215,8 @@ def main():
     print("Head of item_similarity DataFrame:")
     print(item_similarity.head(), "\n")
 
+    with open('predict_rating_out.txt', 'w') as f:
+        pass
 
     # Predict rating for a all users and movie in the test set
     # Loop through all users in the test set
@@ -219,17 +226,18 @@ def main():
         # Get actual rating from the test set
         actual_rating = test[test['user_id'] == picked_userid]['rating'].values[0]
         # Calculate the predicted rating
-        print(f'The actual rating for {picked_movie} by user {picked_userid} is {actual_rating}')
         predicted_rating = predict_rating(matrix_norm, item_similarity, picked_userid, picked_movie)
-        print(f'The predicted rating for {picked_movie} by user {picked_userid} is {predicted_rating}')
         
-        print("------------------------------------------------------------------\n")
-    
+        # Append to the file
+        with open('predict_rating_out.txt', 'a') as f:
+            f.write(f'The predicted rating for {picked_movie} by user {picked_userid} is {predicted_rating}\n')
+            f.write(f'The actual rating for {picked_movie} by user {picked_userid} is {actual_rating}\n')
+            f.write("------------------------------------------------------------------\n")
 
-    # Perform item-based recommendation for a specific user
-    recommended_movies = item_based_rec(matrix_norm, item_similarity, picked_userid=1, number_of_similar_items=5, number_of_recommendations=3)
-    print(f'The top 3 recommended movies for user 1 are {recommended_movies}\n')
-    print("Done\n")
+    # # Perform item-based recommendation for a specific user
+    # recommended_movies = item_based_rec(matrix_norm, item_similarity, picked_userid=1, number_of_similar_items=5, number_of_recommendations=3)
+    # print(f'The top 3 recommended movies for user 1 are {recommended_movies}\n')
+    # print("Done\n")
 
 
 if __name__ == "__main__":
