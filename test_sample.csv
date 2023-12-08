@@ -1,0 +1,23 @@
+user_id,movie_id,rating,title,genres,is_adult,runtime_min,avgRating_IMDB,numVotes_IMDB,avgRating_users,numVotes_users,timestamp,IMDB_id
+1,223,3.0,Clerks (1994),Comedy,0,92,7.7,230016,,,964980985,109445
+1,231,5.0,Dumb & Dumber (Dumb and Dumber) (1994),Adventure|Comedy,0,107,7.3,404437,,,964981179,109686
+1,235,4.0,Ed Wood (1994),Comedy|Drama,0,127,7.8,182178,,,964980908,109707
+1,260,5.0,Star Wars: Episode IV - A New Hope (1977),Action|Adventure|Sci-Fi,0,121,8.6,1424575,,,964981680,76759
+1,296,3.0,Pulp Fiction (1994),Comedy|Crime|Drama|Thriller,0,154,8.9,2167181,,,964982967,110912
+1,316,3.0,Stargate (1994),Action|Adventure|Sci-Fi,0,116,7.0,201533,,,964982310,111282
+1,333,5.0,Tommy Boy (1995),Comedy,0,97,7.1,95278,,,964981179,114694
+1,349,4.0,Clear and Present Danger (1994),Action|Crime|Drama|Thriller,0,141,6.9,106095,,,964982563,109444
+1,356,4.0,Forrest Gump (1994),Comedy|Drama|Romance|War,0,142,8.8,2201926,,,964980962,109830
+1,362,5.0,"Jungle Book, The (1994)",Adventure|Children|Romance,0,111,6.0,18665,,,964982588,110213
+1,367,4.0,"Mask, The (1994)",Action|Comedy|Crime|Fantasy,0,101,6.9,410537,,,964981710,110475
+1,423,3.0,Blown Away (1994),Action|Thriller,0,121,6.2,33179,,,964982363,109303
+1,441,4.0,Dazed and Confused (1993),Comedy,0,103,7.6,195759,,,964980868,106677
+1,457,5.0,"Fugitive, The (1993)",Thriller,0,130,7.8,312005,,,964981909,106977
+1,480,4.0,Jurassic Park (1993),Action|Adventure|Sci-Fi|Thriller,0,127,8.2,1044182,,,964982346,107290
+1,500,3.0,Mrs. Doubtfire (1993),Comedy|Drama,0,125,7.1,284749,,,964981208,107614
+1,527,5.0,Schindler's List (1993),Drama|War,0,195,9.0,1420357,,,964984002,108052
+1,543,4.0,So I Married an Axe Murderer (1993),Comedy|Romance|Thriller,0,93,6.5,42128,,,964981179,108174
+1,552,4.0,"Three Musketeers, The (1993)",Action|Adventure|Comedy|Romance,0,105,6.4,58255,,,964982653,108333
+1,553,5.0,Tombstone (1993),Action|Drama|Western,0,130,7.8,161426,,,964984153,108358
+1,590,4.0,Dances with Wolves (1990),Adventure|Drama|Western,0,181,8.0,284379,,,964982546,99348
+1,592,4.0,Batman (1989),Action|Crime|Thriller,0,126,7.5,397986,,,964982271,96895
