@@ -11,6 +11,8 @@ from matplotlib import pyplot as plt
 from sklearn.metrics.pairwise import cosine_similarity
 
 
+
+
 """
 ------------------------------------------------
  merged.csv info:
@@ -63,10 +65,43 @@ def visualize_ratings(agg_ratings_GT100):
     sns.jointplot(x='mean_rating', y='number_of_ratings', data=agg_ratings_GT100)
     plt.show()    
 
+# Function to update the aggregated ratings data
+def update_agg_ratings(agg_ratings_GT100):
+    # Group by 'title' and calculate mean rating and number of ratings
+    movie_stats = agg_ratings_GT100.groupby('title').agg({'rating': ['mean', 'count']})
+
+    # Reset the index to make 'title' a column again
+    movie_stats = movie_stats.reset_index()
+
+    # Flatten the MultiIndex in columns
+    movie_stats.columns = ['_'.join(col).strip() for col in movie_stats.columns.values]
+
+    # Rename the columns
+    movie_stats.rename(columns={'title_': 'title', 'rating_mean': 'mean_rating', 'rating_count': 'num_ratings'}, inplace=True)
+
+    # Create a dictionary mapping column names in movie_stats to column names in agg_ratings_GT100
+    column_mapping = {'mean_rating': 'avgRating_users', 'num_ratings': 'numVotes_users'}
+
+    # Loop over the column mappings
+    for src_col, dst_col in column_mapping.items():
+        # Create a dictionary mapping movie titles to the values in src_col
+        value_dict = movie_stats.set_index('title')[src_col].to_dict()
+        
+        # Update the values in dst_col in agg_ratings_GT100 using the dictionary
+        agg_ratings_GT100[dst_col] = agg_ratings_GT100['title'].map(value_dict)
+
+    return agg_ratings_GT100
+
 # Function to create the user-item matrix
 def create_user_item_matrix(df_GT100):
     matrix = df_GT100.pivot_table(index='title', columns='user_id', values='rating')
+    print(matrix.head(), "\n")
+    print(matrix[2])  
+    print(matrix.loc['Inception (2010)'])
+
+
     matrix_norm = matrix.subtract(matrix.mean(axis=1), axis=0)
+    print(matrix_norm.loc['Inception (2010)'])
     return matrix_norm    
 
 # Function to calculate item similarity matrix
@@ -76,6 +111,7 @@ def calculate_item_similarity(matrix_norm):
 
 # Function to predict a rating for a given user and movie
 def predict_rating(matrix_norm, item_similarity, picked_userid, picked_movie):
+    print(matrix_norm[picked_userid])
     picked_userid_watched = pd.DataFrame(matrix_norm[picked_userid].dropna(axis=0, how='all') \
                                     .sort_values(ascending=False)) \
                                     .reset_index() \
@@ -89,7 +125,7 @@ def predict_rating(matrix_norm, item_similarity, picked_userid, picked_movie):
                                             on='title',
                                             how='inner') \
                                        .sort_values('similarity_score', ascending=False)[:5]
-    
+    print(picked_userid_watched_similarity.head())    
     predicted_rating = round(np.average(picked_userid_watched_similarity['rating'],
                                     weights=picked_userid_watched_similarity['similarity_score']), 6)
     return predicted_rating
@@ -131,10 +167,20 @@ def main():
     print("Head of agg_ratings_GT100 DataFrame:")
     print(agg_ratings_GT100.head(), "\n")
 
-    # Create a test set by taking one row for each user_id
-    test = agg_ratings_GT100.groupby('user_id').sample(n=1)
+    
+    agg_ratings_GT100 = update_agg_ratings(agg_ratings_GT100)
+
+    print(agg_ratings_GT100)
+
+
+
+    # Print all rows for user_id = 2
+    print(agg_ratings_GT100[agg_ratings_GT100['user_id'] == 2], "\n")
+
+    # Create a test set by taking one row for each user_id, only if the user has an entry in their 'rating' column
+    test = agg_ratings_GT100[agg_ratings_GT100['rating'].notna()].groupby('user_id').apply(lambda x: x.sample(1, random_state=1)).reset_index(drop=True)
     # print rows in test set with user_id = 1
-    print(test[test['user_id'] == 1], "\n")
+    print(test[test['user_id'] == 2], "\n")
 
     # Create a training set by removing the test set rows from the matrix
     train = agg_ratings_GT100.drop(test.index)
@@ -148,32 +194,43 @@ def main():
     train.to_csv('train.csv')
     test.to_csv('test.csv')
 
+    # Print all rows for user_id = 2
+    print(train[train['user_id'] == 2], "\n")
+    print(test[test['user_id'] == 2], "\n")
+
+
     
     # Create user-item matrix and normalize the matrix by subtracting the mean rating of each movie from the ratings
     matrix_norm = create_user_item_matrix(train)
     print("Head of matrix_norm DataFrame:")
     print(matrix_norm.head(), "\n")
 
+
     item_similarity = calculate_item_similarity(matrix_norm)
     print("Head of item_similarity DataFrame:")
     print(item_similarity.head(), "\n")
 
 
-    # Predict rating for a specific user and movie in the test set
-    picked_userid = 1
-    # Get the movie title from the test set
-    picked_movie = test[test['user_id'] == picked_userid]['title'].values[0]
-    # Get actual rating from the test set
-    actual_rating = test[test['user_id'] == picked_userid]['rating'].values[0]
-
-    predicted_rating = predict_rating(matrix_norm, item_similarity, picked_userid, picked_movie)
-    print(f'The predicted rating for {picked_movie} by user {picked_userid} is {predicted_rating}\n')
-    print(f'The actual rating for {picked_movie} by user {picked_userid} is {actual_rating}\n')
+    # Predict rating for a all users and movie in the test set
+    # Loop through all users in the test set
+    for picked_userid in test['user_id'].unique():
+        # Get the movie title from the test set
+        picked_movie = test[test['user_id'] == picked_userid]['title'].values[0]
+        # Get actual rating from the test set
+        actual_rating = test[test['user_id'] == picked_userid]['rating'].values[0]
+        # Calculate the predicted rating
+        print(f'The actual rating for {picked_movie} by user {picked_userid} is {actual_rating}')
+        predicted_rating = predict_rating(matrix_norm, item_similarity, picked_userid, picked_movie)
+        print(f'The predicted rating for {picked_movie} by user {picked_userid} is {predicted_rating}')
+        
+        print("------------------------------------------------------------------\n")
+    
 
     # Perform item-based recommendation for a specific user
     recommended_movies = item_based_rec(matrix_norm, item_similarity, picked_userid=1, number_of_similar_items=5, number_of_recommendations=3)
     print(f'The top 3 recommended movies for user 1 are {recommended_movies}\n')
     print("Done\n")
+
 
 if __name__ == "__main__":
     main()
