@@ -31,7 +31,7 @@ from sklearn.metrics.pairwise import cosine_similarity
 ------------------------------------------------
 """
 
-
+# Function to user-movie rating data from a CSV file
 def load_data(filepath):
     ratings = pd.read_csv(filepath)
     print(ratings.head(), "\n")
@@ -41,31 +41,40 @@ def load_data(filepath):
     print('The unique ratings are', sorted(ratings['rating'].unique()), "\n")
     return ratings    
 
+# Function to preprocess ratings data
 def preprocess_ratings(ratings):
+    # Aggregate ratings by movie title, calculate mean rating and number of ratings
     agg_ratings = ratings.groupby('title').agg(mean_rating=('rating', 'mean'),
                                       number_of_ratings=('rating', 'count')).reset_index()
     
+    # Filter movies with more than 100 ratings
     agg_ratings_GT100 = agg_ratings[agg_ratings['number_of_ratings'] > 100]
 
+    # Visualize the aggregated ratings
     visualize_ratings(agg_ratings_GT100)
 
+    # Merge ratings with movies that have more than 100 ratings, get rid of those with less than 100 ratings
     df_GT100 = pd.merge(ratings, agg_ratings_GT100[['title']], on='title', how='inner')
    
     return df_GT100
     
+# Function to visualize ratings data
 def visualize_ratings(agg_ratings_GT100):
     sns.jointplot(x='mean_rating', y='number_of_ratings', data=agg_ratings_GT100)
     plt.show()    
 
+# Function to create the user-item matrix
 def create_user_item_matrix(df_GT100):
     matrix = df_GT100.pivot_table(index='title', columns='user_id', values='rating')
     matrix_norm = matrix.subtract(matrix.mean(axis=1), axis=0)
     return matrix_norm    
 
+# Function to calculate item similarity
 def calculate_item_similarity(matrix_norm):
     item_similarity = matrix_norm.T.corr()
     return item_similarity
 
+# Function to predict a rating for a given user and movie
 def predict_rating(matrix_norm, item_similarity, picked_userid, picked_movie):
     picked_userid_watched = pd.DataFrame(matrix_norm[picked_userid].dropna(axis=0, how='all') \
                                     .sort_values(ascending=False)) \
@@ -85,6 +94,7 @@ def predict_rating(matrix_norm, item_similarity, picked_userid, picked_movie):
                                     weights=picked_userid_watched_similarity['similarity_score']), 6)
     return predicted_rating
 
+# Function to perform item-based recommendation
 def item_based_rec(matrix_norm, item_similarity, picked_userid, number_of_similar_items, number_of_recommendations):
     picked_userid_unwatched = pd.DataFrame(matrix_norm[picked_userid].isna()).reset_index()
     picked_userid_unwatched = picked_userid_unwatched[picked_userid_unwatched[1] == True]['title'].values.tolist()
@@ -105,6 +115,7 @@ def item_based_rec(matrix_norm, item_similarity, picked_userid, number_of_simila
         rating_prediction[picked_movie] = predicted_rating
     return sorted(rating_prediction.items(), key=lambda x: x[1], reverse=True)[:number_of_recommendations]
 
+# Main function
 def main():
     # Usage example:
     filepath = 'merged.csv'
@@ -113,10 +124,11 @@ def main():
     matrix_norm = create_user_item_matrix(agg_ratings_GT100)
     item_similarity = calculate_item_similarity(matrix_norm)
 
-
+    # Predict rating for a specific user and movie
     predicted_rating = predict_rating(matrix_norm, item_similarity, picked_userid=1, picked_movie='American Pie (1999)')
     print(f'The predicted rating for American Pie (1999) by user 1 is {predicted_rating}\n')
 
+    # Perform item-based recommendation for a specific user
     recommended_movies = item_based_rec(matrix_norm, item_similarity, picked_userid=1, number_of_similar_items=5, number_of_recommendations=3)
     print(f'The top 3 recommended movies for user 1 are {recommended_movies}\n')
     print("Done\n")
