@@ -183,7 +183,7 @@ def main():
     #print(agg_ratings_GT100[agg_ratings_GT100['user_id'] == 2], "\n")
 
     # Create a test set by taking one row for each user_id, only if the user has an entry in their 'rating' column
-    test = agg_ratings_GT100[agg_ratings_GT100['rating'].notna()].groupby('user_id').apply(lambda x: x.sample(1, random_state=1)).reset_index(drop=True)
+    test = agg_ratings_GT100[agg_ratings_GT100['rating'].notna()].groupby('user_id').apply(lambda x: x.sample(1)).reset_index(drop=True)
     # print rows in test set with user_id = 1
     #print(test[test['user_id'] == 2], "\n")
 
@@ -215,6 +215,10 @@ def main():
     print("Head of item_similarity DataFrame:")
     print(item_similarity.head(), "\n")
 
+    actual_rating_list = []
+    predicted_rating_list = []
+    picked_userid_list = []
+    actual_minus_predict_list = []
     with open('predict_rating_out.txt', 'w') as f:
         pass
 
@@ -225,14 +229,31 @@ def main():
         picked_movie = test[test['user_id'] == picked_userid]['title'].values[0]
         # Get actual rating from the test set
         actual_rating = test[test['user_id'] == picked_userid]['rating'].values[0]
+        actual_rating_list.append(actual_rating)
         # Calculate the predicted rating
         predicted_rating = predict_rating(matrix_norm, item_similarity, picked_userid, picked_movie)
+        predicted_rating_list.append(predicted_rating)
+        actual_minus_predict_list.append(abs(predicted_rating - actual_rating)) 
         
         # Append to the file
         with open('predict_rating_out.txt', 'a') as f:
             f.write(f'The predicted rating for {picked_movie} by user {picked_userid} is {predicted_rating}\n')
             f.write(f'The actual rating for {picked_movie} by user {picked_userid} is {actual_rating}\n')
             f.write("------------------------------------------------------------------\n")
+         
+    rating_points = [1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5]
+    data = pd.DataFrame({'UserID': picked_userid_list, 'Predicted Ratings': predicted_rating_list, 'Actual Ratings': actual_rating_list, 'Predicted - Actual Rating': actual_minus_predict_list})
+    sns.set(style="whitegrid")
+    plt.figure(figsize=(16, 8))
+    sns.scatterplot(x='UserID', y='Predicted - Actual Rating', data=data, label='Predicted Ratings')
+    #sns.scatterplot(x='UserID', y='Actual Ratings', data=data, label='Actual Ratings')
+    plt.xlabel('UserID')
+    plt.ylabel('Rating')
+    plt.title('Difference of Predicted and Actual User Ratings')
+    plt.xticks(rotation=45, ha='right')
+    plt.legend()
+    plt.tight_layout()
+    plt.show()
 
     # # Perform item-based recommendation for a specific user
     # recommended_movies = item_based_rec(matrix_norm, item_similarity, picked_userid=1, number_of_similar_items=5, number_of_recommendations=3)
